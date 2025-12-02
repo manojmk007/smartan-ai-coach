@@ -8,14 +8,12 @@ import os
 from src.rules import FormEvaluator
 from src.utils import draw_dashboard
 
-# --- PAGE CONFIG ---
 st.set_page_config(
     page_title="Smartan AI Coach",
     page_icon="💪",
     layout="wide"
 )
 
-# --- SIDEBAR ---
 st.sidebar.title("Smartan AI Coach 🤖")
 st.sidebar.markdown("Computer Vision Fitness Analysis")
 st.sidebar.divider()
@@ -29,7 +27,6 @@ input_source = st.sidebar.radio("Video Input:", ("Upload Video", "Webcam"))
 st.sidebar.divider()
 st.sidebar.info("Processed videos will be saved to the 'output' folder.")
 
-# --- HELPERS ---
 class LowPassFilter:
     def __init__(self, alpha=0.5):
         self.alpha = alpha
@@ -39,7 +36,6 @@ class LowPassFilter:
         else: self.prev = self.alpha * val + (1 - self.alpha) * self.prev
         return self.prev
 
-# --- PROCESSING ENGINE ---
 def process_video_stream(video_source):
     mp_pose = mp.solutions.pose
     mp_drawing = mp.solutions.drawing_utils
@@ -47,25 +43,18 @@ def process_video_stream(video_source):
     smoother = LowPassFilter(0.15)
 
     cap = cv2.VideoCapture(video_source)
-    
-    # --- VIDEO WRITER SETUP (NEW) ---
-    # 1. Get video properties
     frame_width = int(cap.get(3))
     frame_height = int(cap.get(4))
     fps = int(cap.get(cv2.CAP_PROP_FPS))
-    if fps == 0: fps = 30 # Default if webcam fails to report FPS
-
-    # 2. Define output path
+    if fps == 0: fps = 30 
     if not os.path.exists('output'): os.makedirs('output')
     output_filename = f"output/processed_{exercise_code.lower()}.mp4"
     
-    # 3. Initialize Writer
     out = cv2.VideoWriter(output_filename, 
                           cv2.VideoWriter_fourcc(*'mp4v'), 
                           fps, 
                           (frame_width, frame_height))
-    
-    # UI Layout
+
     col_vid, col_stats = st.columns([3, 1])
     
     with col_vid:
@@ -83,7 +72,7 @@ def process_video_stream(video_source):
             if not ret: 
                 break
             
-            # Prep Image
+
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             image.flags.writeable = False
             results = pose.process(image)
@@ -139,18 +128,14 @@ def process_video_stream(video_source):
                         feedback.append((ok, msg))
                         reps = "--"
             except Exception: pass
-
-            # Draw Dashboard
+     
             smooth_prog = smoother.filter(progress)
             draw_dashboard(image, reps, feedback, smooth_prog)
             
-            # Draw Skeleton
             mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
 
-            # --- SAVE FRAME TO VIDEO ---
             out.write(image)
 
-            # Render to Streamlit
             frame_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             st_frame.image(frame_rgb, channels="RGB", use_container_width=True)
             
@@ -160,13 +145,9 @@ def process_video_stream(video_source):
                 if is_good: st_feedback.success(msg)
                 else: st_feedback.error(msg)
 
-    # Cleanup
     cap.release()
-    out.release() # <--- IMPORTANT: Saves the file
+    out.release()
     st.success(f"Video saved successfully to: {output_filename}")
-
-# --- MAIN APP LOGIC ---
-
 st.title(f"Analysis Mode: {mode}")
 
 if input_source == "Upload Video":
